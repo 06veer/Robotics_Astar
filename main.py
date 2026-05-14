@@ -21,11 +21,11 @@ from grid import Grid
 from astar import astar
 from isometric_visuals import IsoRenderer, draw_world, draw_robot
 
-ROWS = 30
-COLS = 40
+ROWS = 20
+COLS = 30
 WINDOW_SIZE = (1280, 840)
-TILE_W = 28
-TILE_H = 14
+TILE_W = 50  # Zoomed in for better visibility
+TILE_H = 25  # Zoomed in for better visibility
 
 
 def draw_help_panel(surface: pygame.Surface, font: pygame.font.Font):
@@ -69,6 +69,13 @@ def main():
         origin_y=80,
     )
 
+    # Camera pan control
+    camera_offset_x = 0
+    camera_offset_y = 0
+    mouse_down = False
+    last_mouse_x = 0
+    last_mouse_y = 0
+
     grid = Grid(ROWS, COLS)
 
     running = True
@@ -91,26 +98,52 @@ def main():
     small_font = pygame.font.SysFont(None, 21)
 
     while running:
+        # Ensure renderer origin reflects current camera offset before handling input
+        renderer.origin_x = WINDOW_SIZE[0] // 2 + camera_offset_x
+        renderer.origin_y = 80 + camera_offset_y
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 running = False
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 x,y = event.pos
-                picked = renderer.pixel_to_cell(x, y, ROWS, COLS)
-                if event.button == 1 and picked is not None:
-                    # Prevent adding/removing obstacles while robot is moving or path is active
-                    if animate or path_cells:
-                        print("Cannot modify obstacles while robot is moving or path is active. Press C to clear.")
-                    else:
-                        # left click toggles obstacle with random type
-                        r, c = picked
-                        node = grid.grid[r][c]
-                        node.is_obstacle = not node.is_obstacle
-                        if node.is_obstacle:
-                            # Randomly select obstacle type when placing
-                            obstacle_types = ["building", "tree", "car", "person", "animal"]
-                            node.obstacle_type = random.choice(obstacle_types)
+                if event.button == 3:  # Right click to pan (hold and drag)
+                    mouse_down = True
+                    last_mouse_x = x
+                    last_mouse_y = y
+                elif event.button == 1:  # Left click to place obstacles
+                    picked = renderer.pixel_to_cell(x, y, ROWS, COLS)
+                    if picked is not None:
+                        # Prevent adding/removing obstacles while robot is moving or path is active
+                        if animate or path_cells:
+                            print("Cannot modify obstacles while robot is moving or path is active. Press C to clear.")
+                        else:
+                            # left click toggles obstacle with random type
+                            r, c = picked
+                            node = grid.grid[r][c]
+                            node.is_obstacle = not node.is_obstacle
+                            if node.is_obstacle:
+                                # Randomly select obstacle type when placing
+                                obstacle_types = ["building", "tree", "car", "person", "animal"]
+                                node.obstacle_type = random.choice(obstacle_types)
+
+            elif event.type == pygame.MOUSEBUTTONUP:
+                if event.button == 3:
+                    mouse_down = False
+
+            elif event.type == pygame.MOUSEMOTION:
+                # Pan camera when right mouse button is held
+                if mouse_down:
+                    x, y = event.pos
+                    dx = x - last_mouse_x
+                    dy = y - last_mouse_y
+                    camera_offset_x += dx
+                    camera_offset_y += dy
+                    last_mouse_x = x
+                    last_mouse_y = y
+                    # update renderer immediately so subsequent picking is consistent
+                    renderer.origin_x = WINDOW_SIZE[0] // 2 + camera_offset_x
+                    renderer.origin_y = 80 + camera_offset_y
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
@@ -202,9 +235,17 @@ def main():
                 animate = False
 
         # draw
+        # Apply camera offset to renderer
+        renderer.origin_x = WINDOW_SIZE[0] // 2 + camera_offset_x
+        renderer.origin_y = 80 + camera_offset_y
+
         draw_world(screen, renderer, grid.grid, open_set, closed_set, path, grid.start, grid.end)
         if robot_pos:
             draw_robot(screen, renderer, robot_pos)
+
+        # Draw pan control hint
+        hint_txt = small_font.render("Right-click + drag to pan", True, (100, 100, 100))
+        screen.blit(hint_txt, (WINDOW_SIZE[0] - 220, WINDOW_SIZE[1] - 25))
 
         # HUD
         txt = font.render(f"Path cost: {path_cost if path_cost!=float('inf') else 'N/A'}  Time: {exec_time:.4f}s  Speed: {speed:.1f} cell/s", True, (0,0,0))
