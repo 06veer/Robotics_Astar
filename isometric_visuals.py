@@ -178,10 +178,44 @@ def draw_world(
 
 
 def draw_robot(surface: pygame.Surface, renderer: IsoRenderer, robot_cell_pos: Tuple[float, float]):
-    """Draw a small robot marker with a shadow on the current tile."""
+    """Draw a detailed small autonomous robot with body, wheels, and antenna."""
     x, y = renderer.robot_anchor(robot_cell_pos[0], robot_cell_pos[1])
-    shadow_r = max(4, renderer.tile_h // 3)
-    pygame.draw.ellipse(surface, (60, 65, 75, 80), (x - shadow_r, y - 3, shadow_r * 2, shadow_r))
-    body_r = max(4, renderer.tile_h // 2)
-    pygame.draw.circle(surface, ROBOT_COLOR, (int(x), int(y - body_r * 0.9)), body_r)
-    pygame.draw.circle(surface, (230, 235, 245), (int(x), int(y - body_r * 0.9)), max(2, body_r // 3), width=1)
+    
+    # Scale robot based on tile size
+    scale = renderer.tile_h / 14.0
+    body_w = max(5, int(10 * scale))
+    body_h = max(6, int(12 * scale))
+    wheel_r = max(2, int(3 * scale))
+    
+    # Shadow beneath robot
+    shadow_r = max(4, int(renderer.tile_h / 3))
+    pygame.draw.ellipse(surface, (60, 65, 75, 100), (int(x - shadow_r), int(y + 2), int(shadow_r * 2), int(shadow_r * 0.7)))
+    
+    # Main robot body (dark chassis)
+    body_rect = pygame.Rect(int(x - body_w // 2), int(y - body_h), body_w, body_h)
+    pygame.draw.rect(surface, ROBOT_COLOR, body_rect, border_radius=2)
+    pygame.draw.rect(surface, (100, 110, 130), body_rect, width=1, border_radius=2)
+    
+    # Left wheel
+    left_wheel_x = int(x - body_w // 2 - 2)
+    left_wheel_y = int(y - body_h // 2)
+    pygame.draw.circle(surface, (50, 50, 60), (left_wheel_x, left_wheel_y), wheel_r)
+    pygame.draw.circle(surface, (80, 85, 95), (left_wheel_x, left_wheel_y), wheel_r, width=1)
+    
+    # Right wheel
+    right_wheel_x = int(x + body_w // 2 + 2)
+    right_wheel_y = int(y - body_h // 2)
+    pygame.draw.circle(surface, (50, 50, 60), (right_wheel_x, right_wheel_y), wheel_r)
+    pygame.draw.circle(surface, (80, 85, 95), (right_wheel_x, right_wheel_y), wheel_r, width=1)
+    
+    # Small sensor/antenna on top (forward indicator)
+    antenna_h = max(3, int(5 * scale))
+    antenna_x = int(x)
+    antenna_y_top = int(y - body_h - antenna_h)
+    antenna_y_base = int(y - body_h)
+    pygame.draw.line(surface, (200, 80, 80), (antenna_x, antenna_y_base), (antenna_x, antenna_y_top), width=1)
+    pygame.draw.circle(surface, (220, 100, 100), (antenna_x, antenna_y_top), 1)
+    
+    # Front light indicator (small circle facing forward)
+    light_y = int(y - body_h * 0.2)
+    pygame.draw.circle(surface, (100, 200, 255), (int(x), light_y), max(1, wheel_r - 1))
