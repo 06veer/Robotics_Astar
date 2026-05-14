@@ -124,6 +124,132 @@ def _draw_block(surface: pygame.Surface, renderer: IsoRenderer, row: int, col: i
     _draw_tile(surface, top, OBSTACLE_TOP)
 
 
+def _draw_building(surface: pygame.Surface, renderer: IsoRenderer, row: int, col: int):
+    """Draw a tall building with multiple levels."""
+    scale = renderer.tile_h / 14.0
+    block_h = int(30 * scale)  # Taller than normal blocks
+    top = renderer.tile_polygon(row, col, y_offset=block_h)
+    base = renderer.tile_polygon(row, col, y_offset=0)
+    
+    t_top, r_top, b_top, l_top = top
+    t_base, r_base, b_base, l_base = base
+    left_face = [l_top, b_top, b_base, l_base]
+    right_face = [b_top, r_top, r_base, b_base]
+    
+    # Building color (grey/tan)
+    pygame.draw.polygon(surface, (120, 115, 100), left_face)
+    pygame.draw.polygon(surface, (140, 135, 120), right_face)
+    _draw_tile(surface, top, (160, 155, 140))
+    
+    # Windows on top (small squares)
+    x, y = renderer.grid_to_screen(row, col)
+    y -= block_h
+    win_size = max(2, int(3 * scale))
+    for wx in range(-4, 5, 3):
+        pygame.draw.rect(surface, (50, 100, 180), (int(x + wx * 2), int(y + 4), win_size, win_size))
+
+
+def _draw_tree(surface: pygame.Surface, renderer: IsoRenderer, row: int, col: int):
+    """Draw a tree with trunk and foliage."""
+    scale = renderer.tile_h / 14.0
+    x, y = renderer.grid_to_screen(row, col)
+    
+    # Trunk (brown rectangle)
+    trunk_w = max(2, int(4 * scale))
+    trunk_h = max(8, int(15 * scale))
+    pygame.draw.rect(surface, (139, 90, 50), (int(x - trunk_w), int(y - trunk_h), int(trunk_w * 2), trunk_h), border_radius=1)
+    
+    # Foliage (green triangle/cone)
+    foliage_top = int(y - trunk_h - int(12 * scale))
+    foliage_r = max(6, int(10 * scale))
+    points = [
+        (int(x), foliage_top),  # top
+        (int(x + foliage_r), int(y - trunk_h + int(6 * scale))),  # right
+        (int(x - foliage_r), int(y - trunk_h + int(6 * scale))),  # left
+    ]
+    pygame.draw.polygon(surface, (34, 139, 34), points)
+    pygame.draw.polygon(surface, (20, 100, 20), points, width=1)
+
+
+def _draw_car(surface: pygame.Surface, renderer: IsoRenderer, row: int, col: int):
+    """Draw a small car/vehicle."""
+    scale = renderer.tile_h / 14.0
+    x, y = renderer.grid_to_screen(row, col)
+    
+    car_w = max(8, int(12 * scale))
+    car_h = max(5, int(8 * scale))
+    
+    # Car body (red)
+    pygame.draw.rect(surface, (200, 50, 50), (int(x - car_w // 2), int(y - car_h), car_w, car_h), border_radius=1)
+    
+    # Windows (light blue)
+    window_w = max(2, int(3 * scale))
+    pygame.draw.rect(surface, (100, 180, 220), (int(x - car_w // 3), int(y - car_h + 1), window_w, window_w))
+    pygame.draw.rect(surface, (100, 180, 220), (int(x + car_w // 3 - window_w), int(y - car_h + 1), window_w, window_w))
+    
+    # Wheels (dark circles)
+    wheel_r = max(2, int(2.5 * scale))
+    pygame.draw.circle(surface, (30, 30, 30), (int(x - car_w // 3), int(y)), wheel_r)
+    pygame.draw.circle(surface, (30, 30, 30), (int(x + car_w // 3), int(y)), wheel_r)
+
+
+def _draw_person(surface: pygame.Surface, renderer: IsoRenderer, row: int, col: int):
+    """Draw a simple person figure."""
+    scale = renderer.tile_h / 14.0
+    x, y = renderer.grid_to_screen(row, col)
+    
+    head_r = max(2, int(3 * scale))
+    body_h = max(4, int(6 * scale))
+    
+    # Head (yellow/skin)
+    pygame.draw.circle(surface, (230, 200, 150), (int(x), int(y - body_h - head_r)), head_r)
+    
+    # Body (shirt - blue)
+    pygame.draw.line(surface, (50, 100, 180), (int(x), int(y - body_h)), (int(x), int(y)), width=max(1, int(2 * scale)))
+    
+    # Arms
+    arm_len = max(3, int(4 * scale))
+    pygame.draw.line(surface, (230, 200, 150), (int(x - arm_len), int(y - body_h + 2)), (int(x + arm_len), int(y - body_h + 2)), width=1)
+    
+    # Legs (dark)
+    leg_len = max(2, int(3 * scale))
+    pygame.draw.line(surface, (50, 50, 50), (int(x - 1), int(y)), (int(x - 1), int(y + leg_len)), width=1)
+    pygame.draw.line(surface, (50, 50, 50), (int(x + 1), int(y)), (int(x + 1), int(y + leg_len)), width=1)
+
+
+def _draw_animal(surface: pygame.Surface, renderer: IsoRenderer, row: int, col: int):
+    """Draw a simple animal (dog-like)."""
+    scale = renderer.tile_h / 14.0
+    x, y = renderer.grid_to_screen(row, col)
+    
+    body_w = max(6, int(8 * scale))
+    body_h = max(4, int(5 * scale))
+    
+    # Body (brown)
+    pygame.draw.ellipse(surface, (180, 110, 70), (int(x - body_w // 2), int(y - body_h), body_w, body_h))
+    
+    # Head (slightly larger circle)
+    head_r = max(3, int(4 * scale))
+    pygame.draw.circle(surface, (200, 130, 90), (int(x + body_w // 3), int(y - body_h - 1)), head_r)
+    
+    # Eyes (black dots)
+    eye_r = max(1, int(1.5 * scale))
+    pygame.draw.circle(surface, (20, 20, 20), (int(x + body_w // 3 - 1), int(y - body_h - 2)), eye_r)
+    pygame.draw.circle(surface, (20, 20, 20), (int(x + body_w // 3 + 1), int(y - body_h - 2)), eye_r)
+    
+    # Tail (curved line)
+    pygame.draw.line(surface, (160, 90, 50), (int(x - body_w // 3), int(y - body_h // 2)), (int(x - body_w // 2 - 2), int(y - body_h // 2 - 2)), width=1)
+
+
+OBSTACLE_DRAWERS = {
+    "building": _draw_building,
+    "tree": _draw_tree,
+    "car": _draw_car,
+    "person": _draw_person,
+    "animal": _draw_animal,
+}
+
+
 def draw_world(
     surface: pygame.Surface,
     renderer: IsoRenderer,
@@ -170,9 +296,15 @@ def draw_world(
             tile_poly = renderer.tile_polygon(row, col)
 
             if node.is_obstacle:
-                # Keep obstacle base subtle, then draw 3D block.
+                # Keep obstacle base subtle, then draw obstacle based on type.
                 _draw_tile(surface, tile_poly, _clamp_color(tile_color, 0.7))
-                _draw_block(surface, renderer, row, col)
+                
+                # Draw obstacle based on its type
+                obstacle_type = node.obstacle_type or "building"  # default to building
+                if obstacle_type in OBSTACLE_DRAWERS:
+                    OBSTACLE_DRAWERS[obstacle_type](surface, renderer, row, col)
+                else:
+                    _draw_block(surface, renderer, row, col)  # fallback
             else:
                 _draw_tile(surface, tile_poly, tile_color)
 

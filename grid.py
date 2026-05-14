@@ -16,6 +16,7 @@ class Grid:
             for n in row:
                 n.reset()
                 n.is_obstacle = False
+                n.obstacle_type = None
         self.start = None
         self.end = None
 

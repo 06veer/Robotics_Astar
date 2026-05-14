@@ -14,6 +14,7 @@ class Node:
         self.row = row
         self.col = col
         self.is_obstacle = False
+        self.obstacle_type: Optional[str] = None  # building, tree, car, person, animal
         self.g = float('inf')  # cost from start
         self.h = 0  # heuristic
         self.f = float('inf')  # total cost

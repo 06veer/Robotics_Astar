@@ -1,7 +1,7 @@
 """Main application for the robot path planning simulator.
 
 Controls:
-- Left click: place/remove obstacle
+- Left click: place/remove obstacle (random type: building, tree, car, person, animal)
 - Press `S` while mouse over a cell: set start
 - Press `F` while mouse over a cell: set finish/goal
 - SPACE: run A*
@@ -14,6 +14,7 @@ Note: simplified input to make the UI easier to use.
 import pygame
 import sys
 import time
+import random
 from typing import List, Tuple
 
 from grid import Grid
@@ -29,11 +30,11 @@ TILE_H = 14
 
 def draw_help_panel(surface: pygame.Surface, font: pygame.font.Font):
     """Draw a compact controls panel to keep the UI beginner-friendly."""
-    panel_width = 290
+    panel_width = 320
     line_height = 20
     lines = [
         "Controls",
-        "Left Click: Add/Remove Obstacle",
+        "Left Click: Add Obstacle (random type)",
         "S: Set Start (hover cell)",
         "F: Set Finish (hover cell)",
         "SPACE: Run A*",
@@ -98,10 +99,14 @@ def main():
                 x,y = event.pos
                 picked = renderer.pixel_to_cell(x, y, ROWS, COLS)
                 if event.button == 1 and picked is not None:
-                    # left click toggles obstacle
+                    # left click toggles obstacle with random type
                     r, c = picked
                     node = grid.grid[r][c]
                     node.is_obstacle = not node.is_obstacle
+                    if node.is_obstacle:
+                        # Randomly select obstacle type when placing
+                        obstacle_types = ["building", "tree", "car", "person", "animal"]
+                        node.obstacle_type = random.choice(obstacle_types)
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
