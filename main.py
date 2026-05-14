@@ -99,14 +99,18 @@ def main():
                 x,y = event.pos
                 picked = renderer.pixel_to_cell(x, y, ROWS, COLS)
                 if event.button == 1 and picked is not None:
-                    # left click toggles obstacle with random type
-                    r, c = picked
-                    node = grid.grid[r][c]
-                    node.is_obstacle = not node.is_obstacle
-                    if node.is_obstacle:
-                        # Randomly select obstacle type when placing
-                        obstacle_types = ["building", "tree", "car", "person", "animal"]
-                        node.obstacle_type = random.choice(obstacle_types)
+                    # Prevent adding/removing obstacles while robot is moving or path is active
+                    if animate or path_cells:
+                        print("Cannot modify obstacles while robot is moving or path is active. Press C to clear.")
+                    else:
+                        # left click toggles obstacle with random type
+                        r, c = picked
+                        node = grid.grid[r][c]
+                        node.is_obstacle = not node.is_obstacle
+                        if node.is_obstacle:
+                            # Randomly select obstacle type when placing
+                            obstacle_types = ["building", "tree", "car", "person", "animal"]
+                            node.obstacle_type = random.choice(obstacle_types)
 
             elif event.type == pygame.KEYDOWN:
                 if event.key == pygame.K_SPACE:
