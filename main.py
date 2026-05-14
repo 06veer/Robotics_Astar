@@ -18,12 +18,13 @@ from typing import List, Tuple
 
 from grid import Grid
 from astar import astar
-from visuals import draw_grid, draw_nodes, draw_start_end, draw_robot, WHITE
+from isometric_visuals import IsoRenderer, draw_world, draw_robot
 
-CELL_SIZE = 20
 ROWS = 30
 COLS = 40
-WINDOW_SIZE = (COLS*CELL_SIZE, ROWS*CELL_SIZE)
+WINDOW_SIZE = (1280, 840)
+TILE_W = 28
+TILE_H = 14
 
 
 def draw_help_panel(surface: pygame.Surface, font: pygame.font.Font):
@@ -60,6 +61,13 @@ def main():
     pygame.display.set_caption("Autonomous Robot Path Planning - A* Simulation")
     clock = pygame.time.Clock()
 
+    renderer = IsoRenderer(
+        tile_w=TILE_W,
+        tile_h=TILE_H,
+        origin_x=WINDOW_SIZE[0] // 2,
+        origin_y=80,
+    )
+
     grid = Grid(ROWS, COLS)
 
     running = True
@@ -69,11 +77,11 @@ def main():
     path_cost = 0
     exec_time = 0
     animate = False
-    robot_pos = None
-    speed = 200.0  # pixels per second
+    robot_pos = None  # (row, col) in float grid coordinates
+    speed = 8.0  # cells per second
     show_help = True
     # animation state
-    path_pixels = []
+    path_cells = []
     path_index = 0
     last_time = time.time()
 
@@ -87,9 +95,11 @@ def main():
 
             elif event.type == pygame.MOUSEBUTTONDOWN:
                 x,y = event.pos
-                node = grid.node_at_pixel(x,y,CELL_SIZE)
-                if event.button == 1:
+                picked = renderer.pixel_to_cell(x, y, ROWS, COLS)
+                if event.button == 1 and picked is not None:
                     # left click toggles obstacle
+                    r, c = picked
+                    node = grid.grid[r][c]
                     node.is_obstacle = not node.is_obstacle
 
             elif event.type == pygame.KEYDOWN:
@@ -99,9 +109,8 @@ def main():
                         path, open_set, closed_set, path_cost, exec_time = astar(grid.grid, grid.start, grid.end)
                         if path:
                             animate = True
-                            # robot pos at center of start cell
-                            robot_pos = (grid.start.col*CELL_SIZE + CELL_SIZE/2, grid.start.row*CELL_SIZE + CELL_SIZE/2)
-                            path_pixels = [(c*CELL_SIZE + CELL_SIZE/2, r*CELL_SIZE + CELL_SIZE/2) for r,c in path]
+                            robot_pos = (float(grid.start.row), float(grid.start.col))
+                            path_cells = path
                             path_index = 0
                             last_time = time.time()
                         else:
@@ -115,72 +124,75 @@ def main():
                     open_set = []
                     closed_set = []
                     animate = False
-                    path_pixels = []
+                    path_cells = []
                     path_index = 0
+                    robot_pos = None
 
                 elif event.key == pygame.K_UP:
-                    speed += 50
+                    speed += 1.0
                 elif event.key == pygame.K_DOWN:
-                    speed = max(50, speed-50)
+                    speed = max(1.0, speed-1.0)
                 elif event.key == pygame.K_h:
                     show_help = not show_help
 
                 elif event.key == pygame.K_s:
                     # set start at mouse position
                     mx, my = pygame.mouse.get_pos()
-                    node = grid.node_at_pixel(mx, my, CELL_SIZE)
-                    if grid.start:
-                        grid.start.is_obstacle = False
-                    grid.start = node
-                    node.is_obstacle = False
+                    picked = renderer.pixel_to_cell(mx, my, ROWS, COLS)
+                    if picked is not None:
+                        r, c = picked
+                        node = grid.grid[r][c]
+                        if grid.start:
+                            grid.start.is_obstacle = False
+                        grid.start = node
+                        node.is_obstacle = False
 
                 elif event.key == pygame.K_f:
                     # set finish/goal at mouse position
                     mx, my = pygame.mouse.get_pos()
-                    node = grid.node_at_pixel(mx, my, CELL_SIZE)
-                    if grid.end:
-                        grid.end.is_obstacle = False
-                    grid.end = node
-                    node.is_obstacle = False
+                    picked = renderer.pixel_to_cell(mx, my, ROWS, COLS)
+                    if picked is not None:
+                        r, c = picked
+                        node = grid.grid[r][c]
+                        if grid.end:
+                            grid.end.is_obstacle = False
+                        grid.end = node
+                        node.is_obstacle = False
 
         # animation step: follow path node-to-node
-        if animate and path_pixels:
+        if animate and path_cells:
             now = time.time()
             dt = now - last_time
             last_time = now
-            if path_index < len(path_pixels)-1:
-                target = path_pixels[path_index+1]
-                curx, cury = robot_pos
-                tx, ty = target
-                dx = tx - curx
-                dy = ty - cury
-                dist = (dx*dx + dy*dy)**0.5
+            if path_index < len(path_cells)-1:
+                tr, tc = path_cells[path_index + 1]
+                cur_r, cur_c = robot_pos
+                dr = tr - cur_r
+                dc = tc - cur_c
+                dist = (dr*dr + dc*dc) ** 0.5
                 if dist < 1e-3:
                     # reached the target node
                     path_index += 1
-                    robot_pos = (tx, ty)
+                    robot_pos = (float(tr), float(tc))
                 else:
                     step = speed * dt
                     if step >= dist:
-                        robot_pos = (tx, ty)
+                        robot_pos = (float(tr), float(tc))
                         path_index += 1
                     else:
-                        nx = curx + dx / dist * step
-                        ny = cury + dy / dist * step
-                        robot_pos = (nx, ny)
+                        nr = cur_r + dr / dist * step
+                        nc = cur_c + dc / dist * step
+                        robot_pos = (nr, nc)
             else:
                 animate = False
 
         # draw
-        screen.fill(WHITE)
-        draw_nodes(screen, grid.grid, CELL_SIZE, open_set, closed_set, path)
-        draw_grid(screen, ROWS, COLS, CELL_SIZE)
-        draw_start_end(screen, grid.start, grid.end, CELL_SIZE)
+        draw_world(screen, renderer, grid.grid, open_set, closed_set, path, grid.start, grid.end)
         if robot_pos:
-            draw_robot(screen, robot_pos, radius=max(4, CELL_SIZE//4))
+            draw_robot(screen, renderer, robot_pos)
 
         # HUD
-        txt = font.render(f"Path cost: {path_cost if path_cost!=float('inf') else 'N/A'}  Time: {exec_time:.4f}s  Speed: {int(speed)} px/s", True, (0,0,0))
+        txt = font.render(f"Path cost: {path_cost if path_cost!=float('inf') else 'N/A'}  Time: {exec_time:.4f}s  Speed: {speed:.1f} cell/s", True, (0,0,0))
         screen.blit(txt, (5,5))
         if show_help:
             draw_help_panel(screen, small_font)

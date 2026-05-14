@@ -2,6 +2,8 @@
 
 This project is a Python-based simulation that demonstrates path planning and obstacle avoidance using the A* algorithm with a Pygame visualization.
 
+The visualization now uses a 2.5D isometric view (instead of a flat grid) to provide a more professional robotics simulation look while keeping the same A* logic.
+
 Run:
 
 ```bash
@@ -27,4 +29,9 @@ Controls:
 
 UI:
 - A built-in help panel is shown on the top-right of the simulation window.
+
+Visualization details:
+- Isometric tile map rendering
+- Raised 3D-style obstacle blocks
+- Robot marker moving along the A* shortest path
 
