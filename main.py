@@ -80,6 +80,7 @@ def main():
     robot_pos = None  # (row, col) in float grid coordinates
     speed = 8.0  # cells per second
     show_help = True
+    path_unreachable = False  # Track if destination is blocked
     # animation state
     path_cells = []
     path_index = 0
@@ -113,8 +114,12 @@ def main():
                             path_cells = path
                             path_index = 0
                             last_time = time.time()
+                            path_unreachable = False
+                            print(f"Path found! Cost: {path_cost}, Time: {exec_time:.4f}s")
                         else:
                             animate = False
+                            path_unreachable = True
+                            print("Destination unreachable! Obstacles block the path.")
                     else:
                         print("Set start and end nodes before running A*")
 
@@ -127,6 +132,7 @@ def main():
                     path_cells = []
                     path_index = 0
                     robot_pos = None
+                    path_unreachable = False
 
                 elif event.key == pygame.K_UP:
                     speed += 1.0
@@ -194,6 +200,12 @@ def main():
         # HUD
         txt = font.render(f"Path cost: {path_cost if path_cost!=float('inf') else 'N/A'}  Time: {exec_time:.4f}s  Speed: {speed:.1f} cell/s", True, (0,0,0))
         screen.blit(txt, (5,5))
+        
+        # Show unreachable message if destination is blocked
+        if path_unreachable:
+            unreachable_txt = font.render("Destination UNREACHABLE - Robot blocked by obstacles!", True, (220, 50, 50))
+            screen.blit(unreachable_txt, (5, 30))
+        
         if show_help:
             draw_help_panel(screen, small_font)
 
