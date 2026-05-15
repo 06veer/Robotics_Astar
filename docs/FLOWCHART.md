@@ -10,6 +10,7 @@ Flowchart Description
        - Pop node with lowest f
        - If goal reached: reconstruct path
        - Else expand neighbors and update costs
-5. Return path or failure
-6. Animate robot along path
-7. End
+5. While the simulation runs, move dynamic obstacles and re-run A* when they change
+6. Return path or failure
+7. Animate robot along the latest safe path
+8. End

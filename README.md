@@ -29,6 +29,10 @@ Controls:
 - Right-drag: orbit the scene around the grid center
 - H: show/hide help panel
 
+Dynamic obstacle behavior:
+- Cars, people, and animals move automatically across the grid.
+- The simulator reruns A* as those obstacles shift so the robot keeps avoiding the current blocked cells.
+
 UI:
 - A built-in help panel is shown on the top-right of the simulation window.
 
@@ -46,6 +50,7 @@ Applications:
 
 Demo obstacles:
 - The simulator starts with a puzzle-style maze layout made from staggered walls and gaps, so the initial path is harder to discover and better for demonstration.
+- Some obstacle types are dynamic and drift during the simulation, which makes replanning visible in real time.
 - Press `C` to keep the obstacle map but reset the start and goal.
 - Press `D` to remove every obstacle and start from a blank grid.
 

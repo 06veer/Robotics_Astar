@@ -19,7 +19,7 @@ import pygame
 import sys
 import time
 import random
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 
 from grid import Grid
 from astar import astar
@@ -38,9 +38,10 @@ def draw_help_panel(surface: pygame.Surface, font: pygame.font.Font):
     line_height = 20
     lines = [
         "Controls",
-        "Left Click: Add Obstacle (random type)",
+        "Left Click: Add/Remove Obstacle (random type)",
         "S: Set Start (hover cell)",
         "F: Set Finish (hover cell)",
+        "Dynamic obstacles move automatically",
         "SPACE: Run A*",
         "C: Clear Start/Goal",
         "D: Clear Entire Map",
@@ -90,6 +91,41 @@ def main():
     last_mouse_y = 0
 
     grid = Grid(ROWS, COLS)
+
+    dynamic_update_interval = 0.85
+    last_dynamic_update = time.time()
+
+    def current_robot_cell() -> Optional[Tuple[int, int]]:
+        if robot_pos is None:
+            return grid.start.pos() if grid.start else None
+        row = max(0, min(grid.rows - 1, int(round(robot_pos[0]))))
+        col = max(0, min(grid.cols - 1, int(round(robot_pos[1]))))
+        return (row, col)
+
+    def compute_path_from(cell: Tuple[int, int], snap_robot: bool) -> bool:
+        nonlocal path, open_set, closed_set, path_cost, exec_time, animate, robot_pos, path_cells, path_index, path_unreachable
+
+        if not grid.end:
+            return False
+
+        start_row, start_col = cell
+        start_node = grid.grid[start_row][start_col]
+        path, open_set, closed_set, path_cost, exec_time = astar(grid.grid, start_node, grid.end)
+
+        if path:
+            animate = True
+            path_cells = path
+            path_index = 0
+            path_unreachable = False
+            if snap_robot:
+                robot_pos = (float(start_row), float(start_col))
+            return True
+
+        animate = False
+        path_cells = []
+        path_index = 0
+        path_unreachable = True
+        return False
     
     def seed_example_obstacles() -> None:
         # Puzzle-style starter layout with wider corridors and guaranteed access to both ends.
@@ -127,9 +163,7 @@ def main():
             for row in range(grid.rows):
                 if (row, col) in corridor or (row, col) in safe_zones or row in gap_rows:
                     continue
-                node = grid.grid[row][col]
-                node.is_obstacle = True
-                node.obstacle_type = wall_types[idx]
+                grid.set_obstacle(row, col, wall_types[idx])
 
         wall_rows = [8, 12]
         row_types = ["animal", "building"]
@@ -142,8 +176,7 @@ def main():
                 node = grid.grid[row][col]
                 if node.is_obstacle:
                     continue
-                node.is_obstacle = True
-                node.obstacle_type = row_types[idx]
+                grid.set_obstacle(row, col, row_types[idx])
 
         accent_blocks = [
             (0, 6, "tree"),
@@ -156,9 +189,7 @@ def main():
 
         for row, col, obstacle_type in accent_blocks:
             if 0 <= row < grid.rows and 0 <= col < grid.cols:
-                node = grid.grid[row][col]
-                node.is_obstacle = True
-                node.obstacle_type = obstacle_type
+                grid.set_obstacle(row, col, obstacle_type)
 
     seed_example_obstacles()
 
@@ -205,12 +236,15 @@ def main():
                         else:
                             # left click toggles obstacle with random type
                             r, c = picked
+                            if (grid.start and (r, c) == grid.start.pos()) or (grid.end and (r, c) == grid.end.pos()):
+                                continue
                             node = grid.grid[r][c]
-                            node.is_obstacle = not node.is_obstacle
                             if node.is_obstacle:
+                                grid.clear_obstacle(r, c)
+                            else:
                                 # Randomly select obstacle type when placing
                                 obstacle_types = ["building", "tree", "car", "person", "animal", "barrier", "crate"]
-                                node.obstacle_type = random.choice(obstacle_types)
+                                grid.set_obstacle(r, c, random.choice(obstacle_types))
 
             elif event.type == pygame.MOUSEBUTTONUP:
                 if event.button == 3:
@@ -240,18 +274,10 @@ def main():
                 if event.key == pygame.K_SPACE:
                     # run A*
                     if grid.start and grid.end:
-                        path, open_set, closed_set, path_cost, exec_time = astar(grid.grid, grid.start, grid.end)
-                        if path:
-                            animate = True
-                            robot_pos = (float(grid.start.row), float(grid.start.col))
-                            path_cells = path
-                            path_index = 0
+                        if compute_path_from(grid.start.pos(), snap_robot=True):
                             last_time = time.time()
-                            path_unreachable = False
                             print(f"Path found! Cost: {path_cost}, Time: {exec_time:.4f}s")
                         else:
-                            animate = False
-                            path_unreachable = True
                             print("Destination unreachable! Obstacles block the path.")
                     else:
                         print("Set start and end nodes before running A*")
@@ -295,9 +321,9 @@ def main():
                         r, c = picked
                         node = grid.grid[r][c]
                         if grid.start:
-                            grid.start.is_obstacle = False
+                            grid.clear_obstacle(grid.start.row, grid.start.col)
                         grid.start = node
-                        node.is_obstacle = False
+                        grid.clear_obstacle(r, c)
 
                 elif event.key == pygame.K_f:
                     # set finish/goal at mouse position
@@ -307,9 +333,25 @@ def main():
                         r, c = picked
                         node = grid.grid[r][c]
                         if grid.end:
-                            grid.end.is_obstacle = False
+                            grid.clear_obstacle(grid.end.row, grid.end.col)
                         grid.end = node
-                        node.is_obstacle = False
+                        grid.clear_obstacle(r, c)
+
+        now = time.time()
+        if now - last_dynamic_update >= dynamic_update_interval:
+            last_dynamic_update = now
+            robot_cell = current_robot_cell()
+            excluded_positions = set()
+            if grid.start:
+                excluded_positions.add(grid.start.pos())
+            if grid.end:
+                excluded_positions.add(grid.end.pos())
+            if robot_cell:
+                excluded_positions.add(robot_cell)
+
+            obstacles_moved = grid.update_dynamic_obstacles(excluded_positions=excluded_positions)
+            if obstacles_moved and animate and robot_cell and grid.end:
+                compute_path_from(robot_cell, snap_robot=False)
 
         # animation step: follow path node-to-node
         if animate and path_cells:
@@ -387,7 +429,7 @@ def main():
         
         # Show unreachable message if destination is blocked
         if path_unreachable:
-            unreachable_txt = font.render("Destination UNREACHABLE - Robot blocked by obstacles!", True, (220, 50, 50))
+            unreachable_txt = font.render("Destination UNREACHABLE - moving obstacles blocked the path!", True, (220, 50, 50))
             screen.blit(unreachable_txt, (5, 30))
         
         if show_help:

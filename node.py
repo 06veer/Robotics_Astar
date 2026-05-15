@@ -15,6 +15,8 @@ class Node:
         self.col = col
         self.is_obstacle = False
         self.obstacle_type: Optional[str] = None  # building, tree, car, person, animal
+        self.is_dynamic = False
+        self.direction: Tuple[int, int] = (0, 0)
         self.g = float('inf')  # cost from start
         self.h = 0  # heuristic
         self.f = float('inf')  # total cost
@@ -28,6 +30,12 @@ class Node:
         self.h = 0
         self.f = float('inf')
         self.parent = None
+
+    def clear_obstacle_state(self):
+        self.is_obstacle = False
+        self.obstacle_type = None
+        self.is_dynamic = False
+        self.direction = (0, 0)
 
     def __repr__(self):
         return f"Node({self.row},{self.col})"
