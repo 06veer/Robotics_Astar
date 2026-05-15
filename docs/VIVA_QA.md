@@ -7,6 +7,9 @@ A: A* uses a heuristic to guide search, often exploring far fewer nodes. BFS fin
 Q: Why Manhattan distance?
 A: Grid movement is restricted to 4 directions; Manhattan is admissible and consistent for this motion model.
 
+Q: How can the grid be inspected from different sides?
+A: Right-click and drag to orbit the 2.5D view around the scene center. This helps inspect obstacle placement and the start/goal positions more clearly.
+
 Q: How is obstacle avoidance handled?
 A: Obstacles are treated as impassable nodes. A* naturally avoids them when computing path.
 

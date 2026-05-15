@@ -6,3 +6,4 @@ Future Enhancements
 - Compare A* performance with Dijkstra and BFS quantitatively.
 - Add waypoint smoothing for smoother robot trajectories.
 - Integrate sensors (simulated LIDAR) for reactive obstacle avoidance.
+- Add an elevation/tilt control to make the orbit view feel even closer to a 3D inspection camera.
